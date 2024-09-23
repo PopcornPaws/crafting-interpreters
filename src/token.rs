@@ -1,8 +1,4 @@
-use std::fmt;
-use std::iter::Peekable;
-use std::str::CharIndices;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Token<'a> {
     pub typ: Type<'a>,
     pub line: usize,
@@ -15,15 +11,7 @@ impl<'a> Token<'a> {
     }
 }
 
-/*
-impl fmt::Display for Token<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?} {} {:?}", self.typ, self.lexeme, self.literal)
-    }
-}
-*/
-
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Type<'a> {
     // Single character tokens
     LeftParent,
@@ -49,7 +37,7 @@ pub enum Type<'a> {
     // Literals.
     Identifier(&'a str),
     String(&'a str),
-    Number(&'a str),
+    Number(f32),
     // Keywords.
     And,
     Class,

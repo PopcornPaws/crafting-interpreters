@@ -1,6 +1,9 @@
 use crate::token::{Token, Type as TokenType};
 use thiserror::Error as ErrorT;
 
+use std::str::FromStr;
+use std::num::ParseFloatError;
+
 #[derive(ErrorT, Debug, PartialEq, Eq)]
 pub enum Error {
     #[error("invalid character ({character}) at line: {line} index: {index}")]
@@ -11,6 +14,8 @@ pub enum Error {
     },
     #[error("missing \" to terminate literal")]
     UnterminatedLiteral,
+    #[error(transparent)]
+    InvalidNumber(#[from] ParseFloatError),
 }
 
 pub struct Scanner<'a> {
@@ -22,6 +27,7 @@ pub struct Scanner<'a> {
 
 impl<'a> Scanner<'a> {
     #[must_use]
+    #[allow(clippy::too_many_lines)] // TODO terrible spaghetti
     pub fn parse(source: &'a str) -> Self {
         let mut tokens = Vec::<Token>::new();
         let mut errors = Vec::<Error>::new();
@@ -76,6 +82,9 @@ impl<'a> Scanner<'a> {
                 Some((_, '/')) => {
                     if let Some((_, '/')) = chars.peek() {
                         // consume lines because we encountered a comment
+                        // TODO could we use while chars.next_if(|&c| c != '\n').is_some()
+                        // or we can't do this because we only want to increment lines if
+                        // '\n' is encountered
                         loop {
                             match chars.next() {
                                 Some((_, '\n')) => {
@@ -114,11 +123,18 @@ impl<'a> Scanner<'a> {
                 // ignore whitespace, etc
                 Some((_, ' ' | '\r' | '\t')) => {}
                 // some invalid character
-                Some((index, character)) => errors.push(Error::InvalidCharacter {
-                    character,
-                    line: lines,
-                    index,
-                }),
+                Some((start, character)) => {
+                    // try parsing a number
+                    if character.is_numeric() {
+                        todo!()
+                    } else {
+                        errors.push(Error::InvalidCharacter {
+                            character,
+                            line: lines,
+                            index: start,
+                        });
+                    }
+                }
                 None => unreachable!(), // because peek is_some
             }
         }
@@ -142,19 +158,6 @@ impl Scanner<'_> {
     pub fn tokens(&self) -> &[Token] {
         &self.tokens
     }
-
-    /*
-    pub fn push(&mut self, typ: TokenType, literal: Option<String>) {
-        let lexeme = &self.source[self.start..self.current];
-        let token = Token {
-            typ,
-            lexeme,
-            literal,
-            lines: self.lines,
-        };
-        self.tokens.push(token);
-    }
-    */
 }
 
 #[cfg(test)]
