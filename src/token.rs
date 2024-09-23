@@ -16,7 +16,7 @@ impl fmt::Display for Token<'_> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Type {
     // Single character tokens
     LeftParent,
@@ -60,6 +60,8 @@ pub enum Type {
     True,
     Var,
     While,
+    // Misc
+    Newline,
     Eof,
 }
 
@@ -69,8 +71,8 @@ impl TryFrom<&mut Peekable<Chars<'_>>> for Type {
         match chars.next() {
             Some('(') => Ok(Self::LeftParent),
             Some(')') => Ok(Self::RightParent),
-            Some('[') => Ok(Self::LeftBrace),
-            Some(']') => Ok(Self::RightBrace),
+            Some('{') => Ok(Self::LeftBrace),
+            Some('}') => Ok(Self::RightBrace),
             Some(',') => Ok(Self::Comma),
             Some('.') => Ok(Self::Dot),
             Some('-') => Ok(Self::Minus),
@@ -113,11 +115,14 @@ impl TryFrom<&mut Peekable<Chars<'_>>> for Type {
                 if let Some('/') = chars.peek() {
                     // consume line because we encountered a comment
                     while chars.next() != Some('\n') {}
-                    // continue recoursively
-                    Self::try_from(chars)
+                    Ok(Self::Newline)
                 } else {
                     Ok(Self::Greater)
                 }
+            }
+            // ignore whitespace, etc, continue recursively
+            Some(' ' | '\r' | '\t') => {
+                Self::try_from(chars)
             }
             Some(unexpected) => Err(format!("unexpected character {unexpected:?}")),
             None => Err("EOF reached".to_string()),
@@ -131,6 +136,22 @@ mod test {
 
     #[test]
     fn basics() {
-        todo!();
+        let input = "\t// this is a comment\n(())(){} \r// grouping\n!*+-/=<> <= == // operators";
+
+        let mut chars = input.chars().peekable();
+        let mut types = Vec::<Type>::new();
+        let mut lines = 1_usize;
+        while dbg!(chars.peek()).is_some() {
+            let ty = Type::try_from(&mut chars).unwrap();
+            if let Type::Newline = ty {
+                lines += 1;
+            }
+            types.push(dbg!(ty));
+            if lines == 3 {
+                break;
+            }
+        }
+        assert_eq!(lines, 3);
+        assert_eq!(types, vec![]);
     }
 }
