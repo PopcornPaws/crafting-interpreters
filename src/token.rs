@@ -114,18 +114,23 @@ impl TryFrom<&mut Peekable<Chars<'_>>> for Type {
             Some('/') => {
                 if let Some('/') = chars.peek() {
                     // consume line because we encountered a comment
-                    while chars.next() != Some('\n') {}
-                    Ok(Self::Newline)
+                    loop {
+                        let next = chars.next();
+                        if next.is_none() {
+                            return Ok(Self::Eof);
+                        } else if next == Some('\n') {
+                            return Ok(Self::Newline);
+                        }
+                    }
                 } else {
                     Ok(Self::Greater)
                 }
             }
             // ignore whitespace, etc, continue recursively
-            Some(' ' | '\r' | '\t') => {
-                Self::try_from(chars)
-            }
+            Some(' ' | '\r' | '\t') => Self::try_from(chars),
+            Some('\n') => Ok(Self::Newline),
             Some(unexpected) => Err(format!("unexpected character {unexpected:?}")),
-            None => Err("EOF reached".to_string()),
+            None => Ok(Self::Eof),
         }
     }
 }
@@ -136,22 +141,20 @@ mod test {
 
     #[test]
     fn basics() {
-        let input = "\t// this is a comment\n(())(){} \r// grouping\n!*+-/=<> <= == // operators";
+        let input =
+            "()\n\t// this is a comment\n(())(){} \r// grouping\n!*+-/=<> <= == // operators";
 
         let mut chars = input.chars().peekable();
         let mut types = Vec::<Type>::new();
         let mut lines = 1_usize;
-        while dbg!(chars.peek()).is_some() {
+        while chars.peek().is_some() {
             let ty = Type::try_from(&mut chars).unwrap();
             if let Type::Newline = ty {
                 lines += 1;
             }
-            types.push(dbg!(ty));
-            if lines == 3 {
-                break;
-            }
+            types.push(ty);
         }
-        assert_eq!(lines, 3);
+        assert_eq!(lines, 4);
         assert_eq!(types, vec![]);
     }
 }
