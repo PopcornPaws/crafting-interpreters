@@ -1,3 +1,29 @@
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+
+lazy_static! {
+    pub static ref KEYWORDS: HashMap<&'static str, Type<'static>> = vec![
+        ("and", Type::And),
+        ("class", Type::Class),
+        ("else", Type::Else),
+        ("false", Type::False),
+        ("fun", Type::Fun),
+        ("for", Type::For),
+        ("if", Type::If),
+        ("nil", Type::Nil),
+        ("or", Type::Or),
+        ("print", Type::Print),
+        ("return", Type::Return),
+        ("super", Type::Super),
+        ("this", Type::This),
+        ("true", Type::True),
+        ("var", Type::Var),
+        ("while", Type::While),
+    ]
+    .into_iter()
+    .collect();
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Token<'a> {
     pub typ: Type<'a>,

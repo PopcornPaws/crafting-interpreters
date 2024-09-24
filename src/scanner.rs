@@ -1,4 +1,4 @@
-use crate::token::{Token, Type as TokenType};
+use crate::token::{Token, Type as TokenType, KEYWORDS};
 use thiserror::Error as ErrorT;
 
 use std::num::ParseFloatError;
@@ -154,6 +154,21 @@ impl<'a> Scanner<'a> {
                             }
                             Err(error) => errors.push(error.into()),
                         }
+                    // try parsing an identifier
+                    } else if character.is_alphabetic() {
+                        // consume until chars are alphanumeric
+                        let mut end = start;
+                        while let Some((e, _num)) = chars.next_if(|(_, n)| n.is_alphanumeric()) {
+                            end = e;
+                        }
+                        let identifier = &source[start..=end];
+                        let token = if let Some(typ) = KEYWORDS.get(identifier) {
+                            Token::new(typ.clone(), lines) // keyword types are cheap to clone
+                        } else {
+                            Token::new(TokenType::Identifier(identifier), lines)
+                            // keyword types are cheap to clone
+                        };
+                        tokens.push(token);
                     } else {
                         errors.push(Error::InvalidCharacter {
                             character,
@@ -287,10 +302,37 @@ mod test {
             &[Token::new(TokenType::Number(1234.5678), 1)]
         );
         let scanner = Scanner::parse("12.34.56.78");
-        assert_eq!(scanner.tokens, &[
-            Token::new(TokenType::Number(12.34), 1),
-            Token::new(TokenType::Dot, 1),
-            Token::new(TokenType::Number(56.78), 1),
-        ]);
+        assert_eq!(
+            scanner.tokens,
+            &[
+                Token::new(TokenType::Number(12.34), 1),
+                Token::new(TokenType::Dot, 1),
+                Token::new(TokenType::Number(56.78), 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn identifiers() {
+        let scanner = Scanner::parse("a");
+        assert_eq!(scanner.tokens, &[Token::new(TokenType::Identifier("a"), 1)]);
+        let scanner = Scanner::parse("and");
+        assert_eq!(scanner.tokens, &[Token::new(TokenType::And, 1)]);
+        let scanner = Scanner::parse("and;\n nil;\n a0123.sqrt();");
+        assert_eq!(
+            scanner.tokens,
+            &[
+                Token::new(TokenType::And, 1),
+                Token::new(TokenType::Semicolon, 1),
+                Token::new(TokenType::Nil, 2),
+                Token::new(TokenType::Semicolon, 2),
+                Token::new(TokenType::Identifier("a0123"), 3),
+                Token::new(TokenType::Dot, 3),
+                Token::new(TokenType::Identifier("sqrt"), 3),
+                Token::new(TokenType::LeftParent, 3),
+                Token::new(TokenType::RightParent, 3),
+                Token::new(TokenType::Semicolon, 3),
+            ]
+        );
     }
 }
