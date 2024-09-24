@@ -1,3 +1,5 @@
+#[allow(clippy::wildcard_imports)]
+use crate::consts::*;
 use crate::token::{Token, Type as TokenType, KEYWORDS};
 use thiserror::Error as ErrorT;
 
@@ -37,57 +39,57 @@ impl<'a> Scanner<'a> {
 
         while chars.peek().is_some() {
             match chars.next() {
-                Some((_, '(')) => tokens.push(Token::new(TokenType::LeftParent, lines)),
-                Some((_, ')')) => tokens.push(Token::new(TokenType::RightParent, lines)),
-                Some((_, '{')) => tokens.push(Token::new(TokenType::LeftBrace, lines)),
-                Some((_, '}')) => tokens.push(Token::new(TokenType::RightBrace, lines)),
-                Some((_, ',')) => tokens.push(Token::new(TokenType::Comma, lines)),
-                Some((_, '.')) => tokens.push(Token::new(TokenType::Dot, lines)),
-                Some((_, '-')) => tokens.push(Token::new(TokenType::Minus, lines)),
-                Some((_, '+')) => tokens.push(Token::new(TokenType::Plus, lines)),
-                Some((_, ';')) => tokens.push(Token::new(TokenType::Semicolon, lines)),
-                Some((_, '*')) => tokens.push(Token::new(TokenType::Star, lines)),
-                Some((_, '!')) => {
-                    if let Some((_, '=')) = chars.peek() {
+                Some((_, LEFT_PARENT)) => tokens.push(Token::new(TokenType::LeftParent, lines)),
+                Some((_, RIGHT_PARENT)) => tokens.push(Token::new(TokenType::RightParent, lines)),
+                Some((_, LEFT_BRACE)) => tokens.push(Token::new(TokenType::LeftBrace, lines)),
+                Some((_, RIGHT_BRACE)) => tokens.push(Token::new(TokenType::RightBrace, lines)),
+                Some((_, COMMA)) => tokens.push(Token::new(TokenType::Comma, lines)),
+                Some((_, DOT)) => tokens.push(Token::new(TokenType::Dot, lines)),
+                Some((_, MINUS)) => tokens.push(Token::new(TokenType::Minus, lines)),
+                Some((_, PLUS)) => tokens.push(Token::new(TokenType::Plus, lines)),
+                Some((_, SEMICOLON)) => tokens.push(Token::new(TokenType::Semicolon, lines)),
+                Some((_, STAR)) => tokens.push(Token::new(TokenType::Star, lines)),
+                Some((_, BANG)) => {
+                    if let Some((_, EQUAL)) = chars.peek() {
                         chars.next();
                         tokens.push(Token::new(TokenType::BangEqual, lines));
                     } else {
                         tokens.push(Token::new(TokenType::Bang, lines));
                     }
                 }
-                Some((_, '=')) => {
-                    if let Some((_, '=')) = chars.peek() {
+                Some((_, EQUAL)) => {
+                    if let Some((_, EQUAL)) = chars.peek() {
                         chars.next();
                         tokens.push(Token::new(TokenType::EqualEqual, lines));
                     } else {
                         tokens.push(Token::new(TokenType::Equal, lines));
                     }
                 }
-                Some((_, '<')) => {
-                    if let Some((_, '=')) = chars.peek() {
+                Some((_, LESS)) => {
+                    if let Some((_, EQUAL)) = chars.peek() {
                         chars.next();
                         tokens.push(Token::new(TokenType::LessEqual, lines));
                     } else {
                         tokens.push(Token::new(TokenType::Less, lines));
                     }
                 }
-                Some((_, '>')) => {
-                    if let Some((_, '=')) = chars.peek() {
+                Some((_, GREATER)) => {
+                    if let Some((_, EQUAL)) = chars.peek() {
                         chars.next();
                         tokens.push(Token::new(TokenType::GreaterEqual, lines));
                     } else {
                         tokens.push(Token::new(TokenType::Greater, lines));
                     }
                 }
-                Some((_, '/')) => {
-                    if let Some((_, '/')) = chars.peek() {
+                Some((_, SLASH)) => {
+                    if let Some((_, SLASH)) = chars.peek() {
                         // consume lines because we encountered a comment
                         // TODO could we use while chars.next_if(|&c| c != '\n').is_some()
                         // or we can't do this because we only want to increment lines if
                         // '\n' is encountered
                         loop {
                             match chars.next() {
-                                Some((_, '\n')) => {
+                                Some((_, NEWLINE)) => {
                                     lines += 1;
                                     break;
                                 }
@@ -100,9 +102,9 @@ impl<'a> Scanner<'a> {
                     }
                 }
                 // string literal
-                Some((start, '\"')) => loop {
+                Some((start, QUOTE)) => loop {
                     match chars.next() {
-                        Some((end, '\"')) => {
+                        Some((end, QUOTE)) => {
                             // strip quotes
                             tokens.push(Token::new(
                                 TokenType::String(&source[start + 1..end]),
@@ -110,7 +112,7 @@ impl<'a> Scanner<'a> {
                             ));
                             break;
                         }
-                        Some((_, '\n')) => lines += 1, // multilines string
+                        Some((_, NEWLINE)) => lines += 1, // multilines string
                         None => {
                             errors.push(Error::UnterminatedLiteral);
                             break;
@@ -119,9 +121,9 @@ impl<'a> Scanner<'a> {
                     }
                 },
                 // add new line
-                Some((_, '\n')) => lines += 1,
+                Some((_, NEWLINE)) => lines += 1,
                 // ignore whitespace, etc
-                Some((_, ' ' | '\r' | '\t')) => {}
+                Some((_, WHITESPACE | CARRIAGE_RETURN | TAB)) => {}
                 // some invalid character
                 Some((start, character)) => {
                     // try parsing a number
