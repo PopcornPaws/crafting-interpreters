@@ -1,8 +1,8 @@
 use crate::token::{Token, Type as TokenType};
 use thiserror::Error as ErrorT;
 
-use std::str::FromStr;
 use std::num::ParseFloatError;
+use std::str::FromStr;
 
 #[derive(ErrorT, Debug, PartialEq, Eq)]
 pub enum Error {
@@ -126,7 +126,34 @@ impl<'a> Scanner<'a> {
                 Some((start, character)) => {
                     // try parsing a number
                     if character.is_numeric() {
-                        todo!()
+                        // consume number until '.'
+                        let mut end = start;
+                        while let Some((e, _num)) = chars.next_if(|(_, n)| n.is_numeric()) {
+                            end = e;
+                        }
+
+                        if let (Some(dot), Some(num)) = (
+                            source.get(end + 1..end + 2),
+                            source
+                                .get(end + 2..end + 3)
+                                .and_then(|slice| slice.chars().next()),
+                        ) {
+                            if dot == "." && num.is_numeric() {
+                                // consume the dot and parse the fractional part
+                                chars.next();
+                                while let Some((e, _num)) = chars.next_if(|(_, n)| n.is_numeric()) {
+                                    end = e;
+                                }
+                            }
+                        }
+
+                        let num_literal = &source[start..=end];
+                        match f32::from_str(num_literal) {
+                            Ok(parsed_f32) => {
+                                tokens.push(Token::new(TokenType::Number(parsed_f32), lines));
+                            }
+                            Err(error) => errors.push(error.into()),
+                        }
                     } else {
                         errors.push(Error::InvalidCharacter {
                             character,
@@ -238,5 +265,32 @@ mod test {
         let scanner = Scanner::parse(input);
         assert!(scanner.tokens.is_empty());
         assert_eq!(scanner.errors, &[Error::UnterminatedLiteral]);
+    }
+
+    #[test]
+    fn numbers() {
+        let scanner = Scanner::parse("1");
+        assert_eq!(scanner.tokens, &[Token::new(TokenType::Number(1.0), 1)]);
+        let scanner = Scanner::parse("1234");
+        assert_eq!(scanner.tokens, &[Token::new(TokenType::Number(1234.0), 1)]);
+        let scanner = Scanner::parse("1234.");
+        assert_eq!(
+            scanner.tokens,
+            &[
+                Token::new(TokenType::Number(1234.0), 1),
+                Token::new(TokenType::Dot, 1)
+            ]
+        );
+        let scanner = Scanner::parse("1234.5678");
+        assert_eq!(
+            scanner.tokens,
+            &[Token::new(TokenType::Number(1234.5678), 1)]
+        );
+        let scanner = Scanner::parse("12.34.56.78");
+        assert_eq!(scanner.tokens, &[
+            Token::new(TokenType::Number(12.34), 1),
+            Token::new(TokenType::Dot, 1),
+            Token::new(TokenType::Number(56.78), 1),
+        ]);
     }
 }
