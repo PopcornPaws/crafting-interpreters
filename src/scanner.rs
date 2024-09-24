@@ -36,7 +36,7 @@ impl<'a> Scanner<'a> {
         let mut chars = source.char_indices().peekable();
 
         while chars.peek().is_some() {
-            match dbg!(chars.next()) {
+            match chars.next() {
                 Some((_, '(')) => tokens.push(Token::new(TokenType::LeftParent, lines)),
                 Some((_, ')')) => tokens.push(Token::new(TokenType::RightParent, lines)),
                 Some((_, '{')) => tokens.push(Token::new(TokenType::LeftBrace, lines)),
@@ -199,6 +199,16 @@ impl Scanner<'_> {
     #[must_use]
     pub fn tokens(&self) -> &[Token] {
         &self.tokens
+    }
+
+    #[must_use]
+    pub fn errors(&self) -> &[Error] {
+        &self.errors
+    }
+
+    #[must_use]
+    pub fn lines(&self) -> usize {
+        self.lines
     }
 }
 
